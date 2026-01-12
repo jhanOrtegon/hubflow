@@ -1,0 +1,162 @@
+import PageContainer from '@/components/layout/page-container';
+import { paymentsApi } from '@/features/payments/api/payments-api';
+import { PaymentsTable } from '@/features/payments/components/payments-table/payments-table';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { IconPlus, IconArrowLeft } from '@tabler/icons-react';
+import Link from 'next/link';
+import { Card, CardHeader, CardDescription, CardTitle, CardAction, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+export const metadata = {
+  title: 'Dashboard: Expenses'
+};
+
+interface ExpensesPageProps {
+  searchParams: Promise<{
+    page?: string;
+    perPage?: string;
+    status?: string;
+    method?: string;
+    category?: string;
+    search?: string;
+  }>;
+}
+
+export default async function ExpensesPage({ searchParams }: ExpensesPageProps) {
+  const params = await searchParams;
+  const page = Number(params.page) || 1;
+  const perPage = Number(params.perPage) || 10;
+
+  const [{ data: payments, total }, stats] = await Promise.all([
+    paymentsApi.getPayments({
+      page,
+      perPage,
+      status: params.status,
+      method: params.method,
+      type: 'gasto',
+      category: params.category,
+      search: params.search
+    }),
+    paymentsApi.getStats()
+  ]);
+
+  const pageCount = Math.ceil(total / perPage);
+
+  const completedCount = payments.filter(p => p.status === 'completed').length;
+  const pendingCount = payments.filter(p => p.status === 'pending').length;
+  const completedAmount = payments
+    .filter(p => p.status === 'completed')
+    .reduce((acc, p) => acc + p.amount, 0);
+
+  return (
+    <PageContainer
+      scrollable
+      pageTitle="Expenses"
+      pageDescription="Track and manage your expense transactions"
+      pageHeaderAction={
+        <div className="flex gap-2">
+          <Link
+            href="/dashboard/finance"
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+          >
+            <IconArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Link>
+          <Link
+            href="/dashboard/finance/expenses/new"
+            className={cn(buttonVariants({ size: 'sm' }))}
+          >
+            <IconPlus className="mr-2 h-4 w-4" /> New Expense
+          </Link>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div className='*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs md:grid-cols-3'>
+          
+          <Card className='@container/card'>
+            <CardHeader>
+              <CardDescription>Total Expenses</CardDescription>
+              <CardTitle className='text-2xl font-semibold tabular-nums @[250px]/card:text-3xl'>
+                {new Intl.NumberFormat('es-CO', {
+                  style: 'currency',
+                  currency: 'COP',
+                  minimumFractionDigits: 0
+                }).format(stats.totalGastos)}
+              </CardTitle>
+              <CardAction>
+                <Badge variant='outline'>
+                  All time
+                </Badge>
+              </CardAction>
+            </CardHeader>
+            <CardFooter className='flex-col items-start gap-1.5 text-sm'>
+              <div className='line-clamp-1 flex gap-2 font-medium'>
+                Total spending
+              </div>
+              <div className='text-muted-foreground'>
+                {payments.length} transactions
+              </div>
+            </CardFooter>
+          </Card>
+
+          <Card className='@container/card'>
+            <CardHeader>
+              <CardDescription>Completed</CardDescription>
+              <CardTitle className='text-2xl font-semibold tabular-nums @[250px]/card:text-3xl'>
+                {new Intl.NumberFormat('es-CO', {
+                  style: 'currency',
+                  currency: 'COP',
+                  minimumFractionDigits: 0
+                }).format(completedAmount)}
+              </CardTitle>
+              <CardAction>
+                <Badge variant='outline'>
+                  {completedCount} items
+                </Badge>
+              </CardAction>
+            </CardHeader>
+            <CardFooter className='flex-col items-start gap-1.5 text-sm'>
+              <div className='line-clamp-1 flex gap-2 font-medium'>
+                Paid expenses
+              </div>
+              <div className='text-muted-foreground'>
+                Successfully processed
+              </div>
+            </CardFooter>
+          </Card>
+
+          <Card className='@container/card'>
+            <CardHeader>
+              <CardDescription>Pending</CardDescription>
+              <CardTitle className='text-2xl font-semibold tabular-nums @[250px]/card:text-3xl'>
+                {new Intl.NumberFormat('es-CO', {
+                  style: 'currency',
+                  currency: 'COP',
+                  minimumFractionDigits: 0
+                }).format(stats.gastoPendiente)}
+              </CardTitle>
+              <CardAction>
+                <Badge variant='outline'>
+                  {pendingCount} items
+                </Badge>
+              </CardAction>
+            </CardHeader>
+            <CardFooter className='flex-col items-start gap-1.5 text-sm'>
+              <div className='line-clamp-1 flex gap-2 font-medium'>
+                Awaiting payment
+              </div>
+              <div className='text-muted-foreground'>
+                Action required
+              </div>
+            </CardFooter>
+          </Card>
+
+        </div>
+
+        <PaymentsTable data={payments} pageCount={pageCount} />
+      </div>
+    </PageContainer>
+  );
+}

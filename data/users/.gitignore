@@ -1,0 +1,5 @@
+# Ignorar todos los archivos de datos de usuarios
+*.json
+
+# Mantener este archivo
+!.gitignore
