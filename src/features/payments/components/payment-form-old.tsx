@@ -36,7 +36,7 @@ export function PaymentForm({ defaultValues, onSubmit, onCancel }: PaymentFormPr
     defaultValues: {
       currency: 'USD',
       status: 'pending',
-      type: 'income',
+      type: 'ingreso',
       method: 'bank_transfer',
       ...defaultValues
     }
